@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Debug localStorage</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .debug-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .gallery-item { margin: 10px 0; padding: 10px; border: 1px solid #ccc; }
+        .poll-card { margin: 10px 0; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        .poll-options button { margin: 5px; padding: 8px 12px; }
+        .status { padding: 10px; background: #f0f0f0; border-radius: 4px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>Debug localStorage Content</h1>
+    
+    <div class="debug-section">
+        <h2>Raw localStorage Data</h2>
+        <div id="rawData"></div>
+    </div>
+    
+    <div class="debug-section">
+        <h2>Gallery Items</h2>
+        <div id="galleryDebug"></div>
+    </div>
+    
+    <div class="debug-section">
+        <h2>Polls</h2>
+        <div id="pollsDebug"></div>
+    </div>
+    
+    <div class="debug-section">
+        <h2>Actions</h2>
+        <button onclick="clearAll()">Clear All localStorage</button>
+        <button onclick="addTestData()">Add Test Data</button>
+        <button onclick="refresh()">Refresh</button>
+    </div>
+
+    <script>
+        function refresh() {
+            // Show raw localStorage data
+            const rawData = document.getElementById('rawData');
+            const galleryItems = localStorage.getItem('galleryItems');
+            const polls = localStorage.getItem('polls');
+            
+            rawData.innerHTML = `
+                <h3>galleryItems:</h3>
+                <pre>${galleryItems || 'null'}</pre>
+                <h3>polls:</h3>
+                <pre>${polls || 'null'}</pre>
+            `;
+            
+            // Render gallery items
+            const galleryDebug = document.getElementById('galleryDebug');
+            galleryDebug.innerHTML = '';
+            
+            try {
+                const items = JSON.parse(galleryItems || '[]');
+                if (items.length === 0) {
+                    galleryDebug.innerHTML = '<p>No gallery items found</p>';
+                } else {
+                    items.forEach((item, index) => {
+                        const div = document.createElement('div');
+                        div.className = 'gallery-item';
+                        div.innerHTML = `
+                            <strong>Item ${index + 1}:</strong><br>
+                            Type: ${item.type}<br>
+                            URL: ${item.src}<br>
+                            Alt: ${item.alt || 'none'}<br>
+                            <img src="${item.src}" alt="${item.alt || 'Gallery item'}" style="max-width: 200px; max-height: 150px;">
+                        `;
+                        galleryDebug.appendChild(div);
+                    });
+                }
+            } catch (error) {
+                galleryDebug.innerHTML = `<p>Error parsing gallery items: ${error.message}</p>`;
+            }
+            
+            // Render polls
+            const pollsDebug = document.getElementById('pollsDebug');
+            pollsDebug.innerHTML = '';
+            
+            try {
+                const pollsData = JSON.parse(polls || '[]');
+                if (pollsData.length === 0) {
+                    pollsDebug.innerHTML = '<p>No polls found</p>';
+                } else {
+                    pollsData.forEach((poll, index) => {
+                        const div = document.createElement('div');
+                        div.className = 'poll-card';
+                        div.innerHTML = `
+                            <h3>Poll ${index + 1}: ${poll.question}</h3>
+                            <div class="poll-options">
+                                ${poll.options.map((option, optIndex) => 
+                                    `<button onclick="vote(${index}, ${optIndex})">${option.text} (${option.votes || 0} votes)</button>`
+                                ).join('')}
+                            </div>
+                        `;
+                        pollsDebug.appendChild(div);
+                    });
+                }
+            } catch (error) {
+                pollsDebug.innerHTML = `<p>Error parsing polls: ${error.message}</p>`;
+            }
+        }
+        
+        function vote(pollIndex, optionIndex) {
+            const polls = JSON.parse(localStorage.getItem('polls') || '[]');
+            if (polls[pollIndex] && polls[pollIndex].options[optionIndex]) {
+                polls[pollIndex].options[optionIndex].votes = (polls[pollIndex].options[optionIndex].votes || 0) + 1;
+                localStorage.setItem('polls', JSON.stringify(polls));
+                refresh();
+            }
+        }
+        
+        function clearAll() {
+            localStorage.removeItem('galleryItems');
+            localStorage.removeItem('polls');
+            refresh();
+        }
+        
+        function addTestData() {
+            // Add test gallery item
+            const testGallery = [
+                {
+                    type: 'image',
+                    src: 'https://picsum.photos/400/300',
+                    alt: 'Test Image'
+                }
+            ];
+            localStorage.setItem('galleryItems', JSON.stringify(testGallery));
+            
+            // Add test poll
+            const testPolls = [
+                {
+                    question: 'What is your favorite color?',
+                    options: [
+                        { text: 'Red', votes: 0 },
+                        { text: 'Blue', votes: 0 },
+                        { text: 'Green', votes: 0 }
+                    ]
+                }
+            ];
+            localStorage.setItem('polls', JSON.stringify(testPolls));
+            
+            refresh();
+        }
+        
+        // Initialize
+        refresh();
+    </script>
+</body>
+</html>

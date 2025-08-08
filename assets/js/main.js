@@ -206,21 +206,5 @@ function renderPolls() {
   });
 }
 
-renderGallery();
-renderPolls();
-
-// Handle messages from admin.html for content updates
-window.addEventListener('message', (event) => {
-  if (!event.data || typeof event.data !== 'object') return;
-  const { type, payload } = event.data;
-  if (type === 'updateGallery') {
-    if (window.USE_SUPABASE) return;
-    storage.set('galleryItems', payload || []);
-    renderGallery();
-  }
-  if (type === 'updatePolls') {
-    if (window.USE_SUPABASE) return;
-    storage.set('polls', payload || []);
-    renderPolls();
-  }
-}); 
+// Note: Gallery and Polls rendering is now handled by index.html script
+// This prevents conflicts between multiple rendering systems 

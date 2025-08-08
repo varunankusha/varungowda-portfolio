@@ -64,11 +64,13 @@
         </ul>
       </section>
 
-      <section id="gallery" class="section container">
-        <h2>Gallery</h2>
-        <p class="subtitle" style="color:var(--muted); margin-top:-8px;">Add images or videos from the Admin page.</p>
-        <div id="galleryGrid" class="grid gallery"></div>
-      </section>
+             <section id="gallery" class="section container">
+         <h2>Gallery</h2>
+         <p class="subtitle" style="color:var(--muted); margin-top:-8px;">Add images or videos from the Admin page.</p>
+         <div id="status" style="padding: 10px; margin: 10px 0; background: #f0f0f0; border-radius: 4px; font-size: 14px; color: #666;">Loading content...</div>
+         <button onclick="forceLocalStorage()" style="margin: 10px 0; padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Force localStorage Rendering</button>
+         <div id="galleryGrid" class="grid gallery"></div>
+       </section>
 
       <section id="polls" class="section container">
         <h2>Polls</h2>
@@ -107,7 +109,7 @@
           <a href="https://github.com/your-handle" target="_blank" rel="noopener">GitHub</a>
           <a href="https://www.linkedin.com/in/varun-gowda-a-p-a58820196/" target="_blank" rel="noopener">LinkedIn</a>
           <a href="tel:+916362213600">Call</a>
-          <a href="admin.html">Admin</a>
+          <a href="working-admin.html">Admin</a>
         </div>
       </div>
     </footer>
@@ -116,82 +118,189 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script type="module">
       import { fetchGallery, fetchPolls, vote } from './assets/js/supabase.js';
+      
       const toYouTubeEmbed = (url) => {
         try { const u = new URL(url); if (u.hostname.includes('youtu.be')) { const id = u.pathname.replace('/', ''); return id?`https://www.youtube.com/embed/${id}`:null; } if (u.hostname.includes('youtube.com')) { if (u.pathname.startsWith('/embed/')) return url; const id = u.searchParams.get('v'); return id?`https://www.youtube.com/embed/${id}`:null; } } catch {} return null; };
-        const toVimeoEmbed = (url) => { try { const u = new URL(url); if (u.hostname.includes('vimeo.com')) { const id = u.pathname.split('/').filter(Boolean)[0]; return id?`https://player.vimeo.com/video/${id}`:null; } } catch {} return null; };
-      async function trySupabase() {
-        try {
-          const res = await fetch('supabase/supabaseConfig.json', { cache: 'no-store' });
-          if (!res.ok) return; // no config, use localStorage
-          window.USE_SUPABASE = true;
-          const gallery = await fetchGallery();
-          const polls = await fetchPolls();
-          // Render gallery
-          const grid = document.getElementById('galleryGrid');
-          if (grid) {
-            grid.innerHTML = '';
-            gallery.forEach((it) => {
-              const wrapper = document.createElement('div');
-              wrapper.className = 'gallery-item';
-              const yt = toYouTubeEmbed(it.storage_url);
-              const vi = toVimeoEmbed(it.storage_url);
-              if (yt || vi) {
-                const el = document.createElement('iframe');
-                el.src = yt || vi;
-                el.setAttribute('frameborder', '0');
-                el.allowFullscreen = true;
-                wrapper.appendChild(el);
-              } else if (/\.(mp4|webm|ogg)(\?.*)?$/i.test(it.storage_url)) {
-                const v = document.createElement('video');
-                v.src = it.storage_url;
-                v.controls = true;
-                wrapper.appendChild(v);
-              } else {
-                const img = document.createElement('img');
-                img.src = it.storage_url;
-                img.alt = it.alt || 'Gallery item';
-                wrapper.appendChild(img);
-              }
-              grid.appendChild(wrapper);
-            });
-          }
-
-          // Render polls
-          const list = document.getElementById('pollsList');
-          if (list) {
-            list.innerHTML = '';
-            polls.forEach((p) => {
-              const card = document.createElement('div');
-              card.className = 'poll-card';
-              const title = document.createElement('h3');
-              title.textContent = p.question;
-              const optionsWrap = document.createElement('div');
-              optionsWrap.className = 'poll-options';
-              const totalVotes = p.options.reduce((s, o) => s + (o.votes || 0), 0) || 0;
-              p.options.forEach((o) => {
-                const btn = document.createElement('button');
-                const percent = totalVotes ? Math.round((o.votes || 0) * 100 / totalVotes) : 0;
-                btn.innerHTML = `${o.text} — ${percent}% (${o.votes || 0})`;
-                btn.addEventListener('click', async () => {
-                  try { await vote(p.id, o.id); location.reload(); } catch (e) { alert('Already voted or error'); }
-                });
-                optionsWrap.appendChild(btn);
-              });
-              const bar = document.createElement('div');
-              bar.className = 'poll-progress';
-              const fill = document.createElement('span');
-              const topPercent = totalVotes ? Math.max(...p.options.map(o => Math.round((o.votes || 0) * 100 / totalVotes))) : 0;
-              fill.style.width = `${topPercent}%`;
-              bar.appendChild(fill);
-              card.appendChild(title);
-              card.appendChild(optionsWrap);
-              card.appendChild(bar);
-              list.appendChild(card);
-            });
-          }
-        } catch {}
+      const toVimeoEmbed = (url) => { try { const u = new URL(url); if (u.hostname.includes('vimeo.com')) { const id = u.pathname.split('/').filter(Boolean)[0]; return id?`https://player.vimeo.com/video/${id}`:null; } } catch {} return null; };
+      
+      // Helper function to render gallery items
+      function renderGalleryItem(item, container) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'gallery-item';
+        
+        const url = item.storage_url || item.src; // Handle both Supabase and localStorage formats
+        const yt = toYouTubeEmbed(url);
+        const vi = toVimeoEmbed(url);
+        
+        if (yt || vi) {
+          const el = document.createElement('iframe');
+          el.src = yt || vi;
+          el.setAttribute('frameborder', '0');
+          el.allowFullscreen = true;
+          wrapper.appendChild(el);
+        } else if (/\.(mp4|webm|ogg)(\?.*)?$/i.test(url)) {
+          const v = document.createElement('video');
+          v.src = url;
+          v.controls = true;
+          wrapper.appendChild(v);
+        } else {
+          const img = document.createElement('img');
+          img.src = url;
+          img.alt = item.alt || 'Gallery item';
+          wrapper.appendChild(img);
+        }
+        container.appendChild(wrapper);
       }
-      trySupabase();
+      
+      // Helper function to render poll
+      function renderPoll(poll, container) {
+        const card = document.createElement('div');
+        card.className = 'poll-card';
+        
+        const title = document.createElement('h3');
+        title.textContent = poll.question;
+        
+        const optionsWrap = document.createElement('div');
+        optionsWrap.className = 'poll-options';
+        
+        const totalVotes = poll.options.reduce((s, o) => s + (o.votes || 0), 0) || 0;
+        
+        poll.options.forEach((option, index) => {
+          const btn = document.createElement('button');
+          const percent = totalVotes ? Math.round((option.votes || 0) * 100 / totalVotes) : 0;
+          btn.innerHTML = `${option.text} — ${percent}% (${option.votes || 0})`;
+          
+          btn.addEventListener('click', async () => {
+            if (window.USE_SUPABASE && poll.id && option.id) {
+              try { 
+                await vote(poll.id, option.id); 
+                location.reload(); 
+              } catch (e) { 
+                alert('Already voted or error'); 
+              }
+            } else {
+              // Handle localStorage voting
+              const polls = JSON.parse(localStorage.getItem('polls') || '[]');
+              const pollIndex = polls.findIndex(p => p.question === poll.question);
+              if (pollIndex !== -1) {
+                polls[pollIndex].options[index].votes = (polls[pollIndex].options[index].votes || 0) + 1;
+                localStorage.setItem('polls', JSON.stringify(polls));
+                location.reload();
+              }
+            }
+          });
+          
+          optionsWrap.appendChild(btn);
+        });
+        
+        const bar = document.createElement('div');
+        bar.className = 'poll-progress';
+        const fill = document.createElement('span');
+        const topPercent = totalVotes ? Math.max(...poll.options.map(o => Math.round((o.votes || 0) * 100 / totalVotes))) : 0;
+        fill.style.width = `${topPercent}%`;
+        bar.appendChild(fill);
+        
+        card.appendChild(title);
+        card.appendChild(optionsWrap);
+        card.appendChild(bar);
+        container.appendChild(card);
+      }
+      
+             async function trySupabase() {
+         try {
+           const res = await fetch('supabase/supabaseConfig.json', { cache: 'no-store' });
+           if (!res.ok) {
+             console.log('No Supabase config, using localStorage');
+             renderLocalStorageContent();
+             return;
+           }
+           
+           // Check if we have localStorage content first
+           const localGallery = JSON.parse(localStorage.getItem('galleryItems') || '[]');
+           const localPolls = JSON.parse(localStorage.getItem('polls') || '[]');
+           
+           if (localGallery.length > 0 || localPolls.length > 0) {
+             console.log('Found localStorage content, using it instead of Supabase');
+             renderLocalStorageContent();
+             return;
+           }
+           
+           window.USE_SUPABASE = true;
+           const gallery = await fetchGallery();
+           const polls = await fetchPolls();
+           
+           // Render gallery
+           const grid = document.getElementById('galleryGrid');
+           if (grid) {
+             grid.innerHTML = '';
+             gallery.forEach((item) => renderGalleryItem(item, grid));
+           }
+
+           // Render polls
+           const list = document.getElementById('pollsList');
+           if (list) {
+             list.innerHTML = '';
+             polls.forEach((poll) => renderPoll(poll, list));
+           }
+         } catch (error) {
+           console.log('Supabase error, falling back to localStorage:', error);
+           renderLocalStorageContent();
+         }
+       }
+      
+             function renderLocalStorageContent() {
+         console.log('Rendering localStorage content...');
+         
+         // Update status
+         const statusEl = document.getElementById('status');
+         if (statusEl) {
+           const galleryItems = JSON.parse(localStorage.getItem('galleryItems') || '[]');
+           const polls = JSON.parse(localStorage.getItem('polls') || '[]');
+           statusEl.textContent = `Using localStorage: ${galleryItems.length} gallery items, ${polls.length} polls`;
+         }
+         
+         // Render gallery from localStorage
+         const grid = document.getElementById('galleryGrid');
+         if (grid) {
+           grid.innerHTML = '';
+           const items = JSON.parse(localStorage.getItem('galleryItems') || '[]');
+           console.log('Gallery items from localStorage:', items);
+           items.forEach((item) => renderGalleryItem(item, grid));
+         }
+         
+         // Render polls from localStorage
+         const list = document.getElementById('pollsList');
+         if (list) {
+           list.innerHTML = '';
+           const polls = JSON.parse(localStorage.getItem('polls') || '[]');
+           console.log('Polls from localStorage:', polls);
+           polls.forEach((poll) => renderPoll(poll, list));
+         }
+       }
+      
+      // Handle messages from admin panel
+      window.addEventListener('message', (event) => {
+        if (!event.data || typeof event.data !== 'object') return;
+        const { type, payload } = event.data;
+        
+        if (type === 'updateGallery') {
+          localStorage.setItem('galleryItems', JSON.stringify(payload || []));
+          renderLocalStorageContent();
+        }
+        if (type === 'updatePolls') {
+          localStorage.setItem('polls', JSON.stringify(payload || []));
+          renderLocalStorageContent();
+        }
+      });
+      
+             // Force localStorage rendering function
+       function forceLocalStorage() {
+         console.log('Forcing localStorage rendering...');
+         renderLocalStorageContent();
+       }
+       
+       // Initialize
+       trySupabase();
     </script>
   </body>
 </html> 

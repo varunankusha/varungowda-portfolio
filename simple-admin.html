@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Simple Admin — VarunGowda</title>
+    <link rel="stylesheet" href="assets/css/styles.css" />
+    <style>
+        .admin { width: min(900px, 92%); margin: 32px auto; }
+        .admin h1 { margin-bottom: 12px; }
+        .gate { display: grid; gap: 10px; max-width: 420px; }
+        .row { display: grid; gap: 8px; margin: 12px 0; }
+        .muted { color: var(--muted); }
+        .list { display: grid; gap: 10px; }
+        .item { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px; }
+        .item small { color: var(--muted); }
+        .flex { display:flex; gap:8px; flex-wrap: wrap; }
+        .split { display:grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        @media (max-width: 780px){ .split{ grid-template-columns: 1fr; } }
+        .success { background: #d4edda; color: #155724; padding: 10px; border-radius: 5px; margin: 10px 0; }
+        .error { background: #f8d7da; color: #721c24; padding: 10px; border-radius: 5px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <div class="admin">
+        <h1>Simple Admin</h1>
+        <p class="muted">This version uses localStorage and will work immediately. Data is saved in your browser.</p>
+        <div id="status" class="success">Ready to add content!</div>
+
+        <section id="auth">
+            <div class="gate">
+                <label for="pwd">Enter admin password</label>
+                <input id="pwd" type="password" placeholder="Password" />
+                <button class="btn primary" id="loginBtn">Unlock</button>
+            </div>
+        </section>
+
+        <section id="content" style="display:none;">
+            <div class="split">
+                <div>
+                    <h2>Gallery</h2>
+                    <div class="row">
+                        <label>Type</label>
+                        <select id="gType">
+                            <option value="image">Image</option>
+                            <option value="video">Video</option>
+                        </select>
+                    </div>
+                    <div class="row">
+                        <label>Source URL</label>
+                        <input id="gSrc" placeholder="https://... or relative path" />
+                    </div>
+                    <div class="row">
+                        <label>Alt/Caption</label>
+                        <input id="gAlt" placeholder="Description (optional)" />
+                    </div>
+                    <div class="flex">
+                        <button class="btn" id="addGallery">Add to Gallery</button>
+                        <button class="btn ghost" id="clearGallery">Clear Gallery</button>
+                    </div>
+                    <div class="list" id="galleryList"></div>
+                </div>
+
+                <div>
+                    <h2>Polls</h2>
+                    <div class="row">
+                        <label>Question</label>
+                        <input id="pQuestion" placeholder="Your question" />
+                    </div>
+                    <div class="row">
+                        <label>Options (comma-separated)</label>
+                        <input id="pOptions" placeholder="Yes,No,Maybe" />
+                    </div>
+                    <div class="flex">
+                        <button class="btn" id="addPoll">Create Poll</button>
+                        <button class="btn ghost" id="clearPolls">Clear Polls</button>
+                    </div>
+                    <div class="list" id="pollsAdminList"></div>
+                </div>
+            </div>
+
+            <div class="row" style="margin-top:16px;">
+                <button class="btn primary" id="pushToSite">Save & Update Site</button>
+                <small class="muted">Opens or updates the main page with your changes.</small>
+            </div>
+
+            <div class="row" style="margin-top:16px;">
+                <h3>Export / Import</h3>
+                <div class="flex">
+                    <button class="btn" id="exportData">Export JSON</button>
+                    <label class="btn ghost" for="importFile" style="cursor:pointer;">Import JSON</label>
+                    <input id="importFile" type="file" accept="application/json" style="display:none;" />
+                </div>
+                <small class="muted">Use this to transfer your gallery and polls to another device.</small>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        const PASSWORD = 'neelamma';
+
+        const storage = {
+            get(key, fallback){ 
+                try { 
+                    return JSON.parse(localStorage.getItem(key)||'') ?? fallback; 
+                } catch { 
+                    return fallback; 
+                } 
+            },
+            set(key, value){ 
+                localStorage.setItem(key, JSON.stringify(value)); 
+            }
+        };
+
+        const authSec = document.getElementById('auth');
+        const contentSec = document.getElementById('content');
+        const loginBtn = document.getElementById('loginBtn');
+        const pwdInput = document.getElementById('pwd');
+        const statusEl = document.getElementById('status');
+
+        function updateStatus(message, type = 'success') {
+            statusEl.textContent = message;
+            statusEl.className = type;
+        }
+
+        loginBtn.addEventListener('click', () => {
+            if (pwdInput.value === PASSWORD) {
+                authSec.style.display = 'none';
+                contentSec.style.display = 'block';
+                loadLists();
+                updateStatus('Admin panel unlocked!', 'success');
+            } else {
+                updateStatus('Incorrect password', 'error');
+            }
+        });
+
+        // Gallery controls
+        const addGalleryBtn = document.getElementById('addGallery');
+        const clearGalleryBtn = document.getElementById('clearGallery');
+        const gType = document.getElementById('gType');
+        const gSrc = document.getElementById('gSrc');
+        const gAlt = document.getElementById('gAlt');
+        const galleryList = document.getElementById('galleryList');
+
+        addGalleryBtn.addEventListener('click', () => {
+            const items = storage.get('galleryItems', []);
+            if (!gSrc.value) {
+                updateStatus('Please enter a source URL', 'error');
+                return;
+            }
+            items.push({ type: gType.value, src: gSrc.value, alt: gAlt.value });
+            storage.set('galleryItems', items);
+            gSrc.value = ''; 
+            gAlt.value = '';
+            loadGalleryList();
+            updateStatus('Gallery item added successfully!', 'success');
+        });
+
+        clearGalleryBtn.addEventListener('click', () => {
+            if (!confirm('Clear all gallery items?')) return;
+            storage.set('galleryItems', []);
+            loadGalleryList();
+            updateStatus('Gallery cleared!', 'success');
+        });
+
+        function loadGalleryList(){
+            galleryList.innerHTML = '';
+            const items = storage.get('galleryItems', []);
+            items.forEach((it, idx) => {
+                const div = document.createElement('div');
+                div.className = 'item';
+                div.innerHTML = `<strong>${it.type.toUpperCase()}</strong> — ${it.src} <br/><small>${it.alt||''}</small>`;
+                const actions = document.createElement('div');
+                actions.className = 'flex';
+                const del = document.createElement('button'); 
+                del.className='btn small'; 
+                del.textContent='Delete';
+                del.addEventListener('click', () => {
+                    const items = storage.get('galleryItems', []);
+                    items.splice(idx,1);
+                    storage.set('galleryItems', items);
+                    loadGalleryList();
+                    updateStatus('Item deleted!', 'success');
+                });
+                actions.appendChild(del);
+                div.appendChild(actions);
+                galleryList.appendChild(div);
+            });
+        }
+
+        // Polls controls
+        const addPollBtn = document.getElementById('addPoll');
+        const clearPollsBtn = document.getElementById('clearPolls');
+        const pQuestion = document.getElementById('pQuestion');
+        const pOptions = document.getElementById('pOptions');
+        const pollsAdminList = document.getElementById('pollsAdminList');
+
+        addPollBtn.addEventListener('click', () => {
+            const polls = storage.get('polls', []);
+            const q = (pQuestion.value||'').trim();
+            const opts = (pOptions.value||'').split(',').map(s => s.trim()).filter(Boolean).map(t => ({ text: t, votes: 0 }));
+            if (!q || !opts.length) {
+                updateStatus('Enter question and at least one option', 'error');
+                return;
+            }
+            polls.push({ question: q, options: opts });
+            storage.set('polls', polls);
+            pQuestion.value = ''; 
+            pOptions.value = '';
+            loadPollsList();
+            updateStatus('Poll created successfully!', 'success');
+        });
+
+        clearPollsBtn.addEventListener('click', () => {
+            if (!confirm('Clear all polls?')) return;
+            storage.set('polls', []);
+            loadPollsList();
+            updateStatus('Polls cleared!', 'success');
+        });
+
+        function loadPollsList(){
+            pollsAdminList.innerHTML = '';
+            const localPolls = storage.get('polls', []);
+            localPolls.forEach((p, idx) => {
+                const div = document.createElement('div');
+                div.className = 'item';
+                div.innerHTML = `<strong>${p.question}</strong><br/><small>${p.options.map(o=>o.text).join(', ')}</small>`;
+                const actions = document.createElement('div');
+                actions.className = 'flex';
+                const del = document.createElement('button'); 
+                del.className='btn small'; 
+                del.textContent='Delete';
+                del.addEventListener('click', () => {
+                    const arr = storage.get('polls', []);
+                    arr.splice(idx,1);
+                    storage.set('polls', arr);
+                    loadPollsList();
+                    updateStatus('Poll deleted!', 'success');
+                });
+                actions.appendChild(del);
+                div.appendChild(actions);
+                pollsAdminList.appendChild(div);
+            });
+        }
+
+        function loadLists(){ 
+            loadGalleryList(); 
+            loadPollsList(); 
+        }
+
+        const pushBtn = document.getElementById('pushToSite');
+        pushBtn.addEventListener('click', () => {
+            const data = {
+                gallery: storage.get('galleryItems', []),
+                polls: storage.get('polls', [])
+            };
+            try {
+                if (window.opener) {
+                    window.opener.postMessage({ type: 'updateGallery', payload: data.gallery }, '*');
+                    window.opener.postMessage({ type: 'updatePolls', payload: data.polls }, '*');
+                    updateStatus('Updated the main page. Switch to it to see changes.', 'success');
+                } else {
+                    window.open('index.html', '_blank');
+                    updateStatus('Opened the main page. Your data is already saved.', 'success');
+                }
+            } catch (e) {
+                updateStatus('Could not message the main page. Open index.html and try again.', 'error');
+            }
+        });
+
+        // Export / Import
+        const exportBtn = document.getElementById('exportData');
+        const importInput = document.getElementById('importFile');
+
+        exportBtn.addEventListener('click', () => {
+            const blob = new Blob([JSON.stringify({
+                galleryItems: storage.get('galleryItems', []),
+                polls: storage.get('polls', [])
+            }, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'site-data.json';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+            updateStatus('Data exported successfully!', 'success');
+        });
+
+        importInput.addEventListener('change', async () => {
+            const file = importInput.files && importInput.files[0];
+            if (!file) return;
+            try {
+                const text = await file.text();
+                const data = JSON.parse(text);
+                if (data.galleryItems) storage.set('galleryItems', data.galleryItems);
+                if (data.polls) storage.set('polls', data.polls);
+                loadLists();
+                if (window.opener) {
+                    window.opener.postMessage({ type: 'updateGallery', payload: storage.get('galleryItems', []) }, '*');
+                    window.opener.postMessage({ type: 'updatePolls', payload: storage.get('polls', []) }, '*');
+                }
+                updateStatus('Data imported successfully!', 'success');
+            } catch (e) {
+                updateStatus('Failed to import JSON', 'error');
+            } finally {
+                importInput.value = '';
+            }
+        });
+
+        // Enter key support for password
+        pwdInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                loginBtn.click();
+            }
+        });
+    </script>
+</body>
+</html>
