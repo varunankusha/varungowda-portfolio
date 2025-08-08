@@ -29,7 +29,6 @@
           <label for="pwd">Enter admin password</label>
           <input id="pwd" type="password" placeholder="Password" />
           <button class="btn primary" id="loginBtn">Unlock</button>
-          <small class="muted">Default password: <code>varun</code> (change in script)</small>
         </div>
       </section>
 
@@ -95,7 +94,7 @@
     </div>
 
     <script>
-      const PASSWORD = 'varun';
+      const PASSWORD = 'neelamma';
 
       const storage = {
         get(key, fallback){ try { return JSON.parse(localStorage.getItem(key)||'') ?? fallback; } catch { return fallback; } },
@@ -141,24 +140,48 @@
       });
 
       function loadGalleryList(){
-        const items = storage.get('galleryItems', []);
         galleryList.innerHTML = '';
-        items.forEach((it, idx) => {
-          const div = document.createElement('div');
-          div.className = 'item';
-          div.innerHTML = `<strong>${it.type.toUpperCase()}</strong> — ${it.src} <br/><small>${it.alt||''}</small>`;
-          const actions = document.createElement('div');
-          actions.className = 'flex';
-          const del = document.createElement('button'); del.className='btn small'; del.textContent='Delete';
-          del.addEventListener('click', () => {
-            const items = storage.get('galleryItems', []);
-            items.splice(idx,1);
-            storage.set('galleryItems', items);
-            loadGalleryList();
+        // Try Supabase view
+        withSupabase(async (sb) => {
+          const { data, error } = await sb.from('gallery_items').select('*').order('created_at', { ascending: false });
+          if (!error && data) {
+            data.forEach((it) => {
+              const div = document.createElement('div');
+              div.className = 'item';
+              div.innerHTML = `<strong>${it.type.toUpperCase()}</strong> — ${it.storage_url} <br/><small>${it.alt||''}</small>`;
+              const actions = document.createElement('div');
+              actions.className = 'flex';
+              const del = document.createElement('button'); del.className='btn small'; del.textContent='Delete';
+              del.addEventListener('click', async () => {
+                const { error: e } = await sb.from('gallery_items').delete().eq('id', it.id);
+                if (e) return alert('Failed to delete');
+                loadGalleryList();
+              });
+              actions.appendChild(del);
+              div.appendChild(actions);
+              galleryList.appendChild(div);
+            });
+            return;
+          }
+          // Fallback local
+          const items = storage.get('galleryItems', []);
+          items.forEach((it, idx) => {
+            const div = document.createElement('div');
+            div.className = 'item';
+            div.innerHTML = `<strong>${it.type.toUpperCase()}</strong> — ${it.src} <br/><small>${it.alt||''}</small>`;
+            const actions = document.createElement('div');
+            actions.className = 'flex';
+            const del = document.createElement('button'); del.className='btn small'; del.textContent='Delete';
+            del.addEventListener('click', () => {
+              const items = storage.get('galleryItems', []);
+              items.splice(idx,1);
+              storage.set('galleryItems', items);
+              loadGalleryList();
+            });
+            actions.appendChild(del);
+            div.appendChild(actions);
+            galleryList.appendChild(div);
           });
-          actions.appendChild(del);
-          div.appendChild(actions);
-          galleryList.appendChild(div);
         });
       }
 
@@ -187,24 +210,48 @@
       });
 
       function loadPollsList(){
-        const polls = storage.get('polls', []);
         pollsAdminList.innerHTML = '';
-        polls.forEach((p, idx) => {
-          const div = document.createElement('div');
-          div.className = 'item';
-          div.innerHTML = `<strong>${p.question}</strong><br/><small>${p.options.map(o=>o.text).join(', ')}</small>`;
-          const actions = document.createElement('div');
-          actions.className = 'flex';
-          const del = document.createElement('button'); del.className='btn small'; del.textContent='Delete';
-          del.addEventListener('click', () => {
-            const arr = storage.get('polls', []);
-            arr.splice(idx,1);
-            storage.set('polls', arr);
-            loadPollsList();
+        withSupabase(async (sb) => {
+          const { data: polls, error: e1 } = await sb.from('polls').select('*').order('created_at', { ascending: false });
+          if (!e1 && polls) {
+            for (const p of polls) {
+              const { data: opts } = await sb.from('poll_options').select('*').eq('poll_id', p.id);
+              const div = document.createElement('div');
+              div.className = 'item';
+              div.innerHTML = `<strong>${p.question}</strong><br/><small>${(opts||[]).map(o=>o.text).join(', ')}</small>`;
+              const actions = document.createElement('div');
+              actions.className = 'flex';
+              const del = document.createElement('button'); del.className='btn small'; del.textContent='Delete';
+              del.addEventListener('click', async () => {
+                const { error: e } = await sb.from('polls').delete().eq('id', p.id);
+                if (e) return alert('Failed to delete');
+                loadPollsList();
+              });
+              actions.appendChild(del);
+              div.appendChild(actions);
+              pollsAdminList.appendChild(div);
+            }
+            return;
+          }
+          // Fallback local
+          const localPolls = storage.get('polls', []);
+          localPolls.forEach((p, idx) => {
+            const div = document.createElement('div');
+            div.className = 'item';
+            div.innerHTML = `<strong>${p.question}</strong><br/><small>${p.options.map(o=>o.text).join(', ')}</small>`;
+            const actions = document.createElement('div');
+            actions.className = 'flex';
+            const del = document.createElement('button'); del.className='btn small'; del.textContent='Delete';
+            del.addEventListener('click', () => {
+              const arr = storage.get('polls', []);
+              arr.splice(idx,1);
+              storage.set('polls', arr);
+              loadPollsList();
+            });
+            actions.appendChild(del);
+            div.appendChild(actions);
+            pollsAdminList.appendChild(div);
           });
-          actions.appendChild(del);
-          div.appendChild(actions);
-          pollsAdminList.appendChild(div);
         });
       }
 
