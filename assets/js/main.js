@@ -42,20 +42,82 @@ const storage = {
   }
 };
 
+function toYouTubeEmbed(url) {
+  try {
+    const u = new URL(url);
+    if (u.hostname.includes('youtu.be')) {
+      const id = u.pathname.replace('/', '');
+      return id ? `https://www.youtube.com/embed/${id}` : null;
+    }
+    if (u.hostname.includes('youtube.com')) {
+      if (u.pathname.startsWith('/embed/')) return url;
+      const id = u.searchParams.get('v');
+      return id ? `https://www.youtube.com/embed/${id}` : null;
+    }
+  } catch {}
+  return null;
+}
+
+function toVimeoEmbed(url) {
+  try {
+    const u = new URL(url);
+    if (u.hostname.includes('vimeo.com')) {
+      const id = u.pathname.split('/').filter(Boolean)[0];
+      return id ? `https://player.vimeo.com/video/${id}` : null;
+    }
+  } catch {}
+  return null;
+}
+
+function createEmbeddedVideoElement(src) {
+  const yt = toYouTubeEmbed(src);
+  if (yt) {
+    const iframe = document.createElement('iframe');
+    iframe.src = yt;
+    iframe.title = 'YouTube video player';
+    iframe.setAttribute('frameborder', '0');
+    iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share');
+    iframe.allowFullscreen = true;
+    return iframe;
+  }
+  const vimeo = toVimeoEmbed(src);
+  if (vimeo) {
+    const iframe = document.createElement('iframe');
+    iframe.src = vimeo;
+    iframe.title = 'Vimeo video player';
+    iframe.setAttribute('frameborder', '0');
+    iframe.setAttribute('allow', 'autoplay; fullscreen; picture-in-picture');
+    iframe.allowFullscreen = true;
+    return iframe;
+  }
+  // Fallback to HTML5 video for direct media files
+  const isMedia = /\.(mp4|webm|ogg)(\?.*)?$/i.test(src);
+  if (isMedia) {
+    const v = document.createElement('video');
+    v.src = src;
+    v.controls = true;
+    return v;
+  }
+  // Generic iframe fallback
+  const iframe = document.createElement('iframe');
+  iframe.src = src;
+  iframe.setAttribute('frameborder', '0');
+  iframe.allowFullscreen = true;
+  return iframe;
+}
+
 // Render Gallery
 function renderGallery() {
   const grid = document.getElementById('galleryGrid');
   if (!grid) return;
   const items = storage.get('galleryItems', []);
   grid.innerHTML = '';
-  items.forEach((it, idx) => {
+  items.forEach((it) => {
     const wrapper = document.createElement('div');
     wrapper.className = 'gallery-item';
     if (it.type === 'video') {
-      const v = document.createElement('video');
-      v.src = it.src;
-      v.controls = true;
-      wrapper.appendChild(v);
+      const embed = createEmbeddedVideoElement(it.src);
+      wrapper.appendChild(embed);
     } else {
       const img = document.createElement('img');
       img.src = it.src;
