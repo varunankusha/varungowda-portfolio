@@ -29,7 +29,6 @@
           <label for="pwd">Enter admin password</label>
           <input id="pwd" type="password" placeholder="Password" />
           <button class="btn primary" id="loginBtn">Unlock</button>
-          <small class="muted">Default password: <code>varun</code> (change in script)</small>
         </div>
       </section>
 
@@ -95,7 +94,7 @@
     </div>
 
     <script>
-      const PASSWORD = 'varun';
+      const PASSWORD = 'neelamma';
 
       const storage = {
         get(key, fallback){ try { return JSON.parse(localStorage.getItem(key)||'') ?? fallback; } catch { return fallback; } },
