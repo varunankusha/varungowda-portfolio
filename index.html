@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>VarunGowda A P — Portfolio</title>
+    <meta name="description" content="Portfolio of VarunGowda A P — Support Analyst with expertise in troubleshooting, SQL, Linux, Docker, and Kubernetes." />
+    <meta name="theme-color" content="#0f172a" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="assets/css/styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <nav class="nav container" aria-label="Primary">
+        <a class="logo" href="#home" aria-label="Go to home">VG</a>
+        <button class="nav-toggle" aria-expanded="false" aria-label="Toggle navigation">
+          <span></span><span></span><span></span>
+        </button>
+        <ul class="nav-links">
+          <li><a href="#about">About</a></li>
+          <li><a href="#gallery">Gallery</a></li>
+          <li><a href="#polls">Polls</a></li>
+          <li><a href="#contact">Contact</a></li>
+        </ul>
+      </nav>
+    </header>
+
+    <main id="home">
+      <section class="hero container">
+        <div class="hero-copy">
+          <h1>Hi, I'm VarunGowda<span class="accent">.</span></h1>
+          <p class="subtitle">Support Analyst specializing in troubleshooting, SQL, Linux, Docker, and Kubernetes.</p>
+          <div class="cta-row">
+            <a class="btn primary" href="#projects">View Projects</a>
+            <a class="btn ghost" href="#contact">Contact Me</a>
+          </div>
+          <div class="meta">
+            <a href="tel:+916362213600">+91 63622 13600</a>
+            <span aria-hidden="true">·</span>
+            <a href="https://www.linkedin.com/in/varun-gowda-a-p-a58820196/" target="_blank" rel="noopener">LinkedIn</a>
+            <span aria-hidden="true">·</span>
+            <a href="assets/VarunGowda_Resume.pdf" download>Resume</a>
+          </div>
+        </div>
+        <div class="hero-media">
+          <img src="assets/img/profile.svg" alt="Portrait of VarunGowda A P" />
+        </div>
+      </section>
+
+      <section id="about" class="section container">
+        <h2>About</h2>
+        <p>
+          I am a Support Analyst focused on reliable operations and rapid incident resolution. I troubleshoot
+          complex issues across infrastructure and applications, and work hands‑on with SQL, Linux, Docker,
+          and Kubernetes to keep systems healthy and performant.
+        </p>
+        <ul class="details">
+          <li><strong>Location:</strong> Mandya, India</li>
+          <li><strong>Focus:</strong> Production Support, SRE/DevOps, Incident Management</li>
+          <li><strong>Stack:</strong> SQL, Linux, Docker, Kubernetes, Bash</li>
+          <li><strong>Interests:</strong> Agriculture, Literature, Public Policy, Social Impact</li>
+        </ul>
+      </section>
+
+      <section id="gallery" class="section container">
+        <h2>Gallery</h2>
+        <p class="subtitle" style="color:var(--muted); margin-top:-8px;">Add images or videos from the Admin page.</p>
+        <div id="galleryGrid" class="grid gallery"></div>
+      </section>
+
+      <section id="polls" class="section container">
+        <h2>Polls</h2>
+        <p class="subtitle" style="color:var(--muted); margin-top:-8px;">Create and manage polls from the Admin page.</p>
+        <div id="pollsList" class="polls-list"></div>
+      </section>
+
+      <section id="contact" class="section container">
+        <h2>Contact</h2>
+        <p>I'm open to opportunities and collaborations. Drop a message:</p>
+        <form class="contact-form" action="https://formspree.io/f/your-id" method="POST">
+          <div class="field">
+            <label for="name">Name</label>
+            <input id="name" name="name" required />
+          </div>
+          <div class="field">
+            <label for="email">Email</label>
+            <input id="email" type="email" name="_replyto" required />
+          </div>
+          <div class="field">
+            <label for="message">Message</label>
+            <textarea id="message" name="message" rows="5" required></textarea>
+          </div>
+          <button class="btn primary" type="submit">Send</button>
+        </form>
+        <p class="meta" style="margin-top:12px;">
+          Prefer a quick call? <a href="tel:+916362213600">+91 63622 13600</a>
+        </p>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <p>© <span id="year"></span> VarunGowda A P</p>
+        <div class="social">
+          <a href="https://github.com/your-handle" target="_blank" rel="noopener">GitHub</a>
+          <a href="https://www.linkedin.com/in/varun-gowda-a-p-a58820196/" target="_blank" rel="noopener">LinkedIn</a>
+          <a href="tel:+916362213600">Call</a>
+          <a href="admin.html">Admin</a>
+        </div>
+      </div>
+    </footer>
+
+    <script src="assets/js/main.js"></script>
+  </body>
+</html> 
