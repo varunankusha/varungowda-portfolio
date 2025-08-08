@@ -269,6 +269,54 @@
           importInput.value = '';
         }
       });
+
+      // Supabase integration (optional)
+      const supaScript = document.createElement('script');
+      supaScript.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+      document.body.appendChild(supaScript);
+
+      async function withSupabase(cb){
+        try {
+          const res = await fetch('supabase/supabaseConfig.json', { cache: 'no-store' });
+          if (!res.ok) return null;
+          const cfg = await res.json();
+          const { createClient } = window.supabase;
+          return cb(createClient(cfg.url, cfg.anonKey));
+        } catch { return null; }
+      }
+
+      // If Supabase is present, wire quick actions
+      addGalleryBtn.addEventListener('click', async () => {
+        const using = await withSupabase(async (sb) => {
+          if (!gSrc.value) return false;
+          const { error } = await sb.from('gallery_items').insert({ type: gType.value, storage_url: gSrc.value, alt: gAlt.value || null });
+          if (error) { alert('Supabase error adding gallery item'); return true; }
+          alert('Added to Supabase gallery.');
+          gSrc.value = ''; gAlt.value = '';
+          return true;
+        });
+        if (using) return; // handled via Supabase
+        // fallback localStorage handled above
+      }, { capture: true });
+
+      addPollBtn.addEventListener('click', async () => {
+        const using = await withSupabase(async (sb) => {
+          const q = (pQuestion.value||'').trim();
+          const opts = (pOptions.value||'').split(',').map(s => s.trim()).filter(Boolean);
+          if (!q || !opts.length) return false;
+          const { data: poll, error: e1 } = await sb.from('polls').insert({ question: q }).select('*').single();
+          if (e1) { alert('Supabase error creating poll'); return true; }
+          const rows = opts.map(text => ({ poll_id: poll.id, text }));
+          const { error: e2 } = await sb.from('poll_options').insert(rows);
+          if (e2) { alert('Supabase error adding options'); return true; }
+          alert('Poll created in Supabase.');
+          pQuestion.value = ''; pOptions.value = '';
+          return true;
+        });
+        if (using) return; // handled via Supabase
+        // fallback localStorage handled above
+      }, { capture: true });
+
     </script>
   </body>
 </html> 
