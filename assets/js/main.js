@@ -111,8 +111,9 @@ function createEmbeddedVideoElement(src) {
   return iframe;
 }
 
-// Render Gallery
+// Render Gallery (local fallback)
 function renderGallery() {
+  if (window.USE_SUPABASE) return; // Supabase handles rendering
   const grid = document.getElementById('galleryGrid');
   if (!grid) return;
   const items = storage.get('galleryItems', []);
@@ -146,8 +147,9 @@ function computePollKey(poll) {
   return String(hash);
 }
 
-// Render Polls
+// Render Polls (local fallback)
 function renderPolls() {
+  if (window.USE_SUPABASE) return; // Supabase handles rendering
   const list = document.getElementById('pollsList');
   if (!list) return;
   const polls = storage.get('polls', []);
@@ -212,10 +214,12 @@ window.addEventListener('message', (event) => {
   if (!event.data || typeof event.data !== 'object') return;
   const { type, payload } = event.data;
   if (type === 'updateGallery') {
+    if (window.USE_SUPABASE) return;
     storage.set('galleryItems', payload || []);
     renderGallery();
   }
   if (type === 'updatePolls') {
+    if (window.USE_SUPABASE) return;
     storage.set('polls', payload || []);
     renderPolls();
   }

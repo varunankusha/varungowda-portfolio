@@ -123,6 +123,7 @@
         try {
           const res = await fetch('supabase/supabaseConfig.json', { cache: 'no-store' });
           if (!res.ok) return; // no config, use localStorage
+          window.USE_SUPABASE = true;
           const gallery = await fetchGallery();
           const polls = await fetchPolls();
           // Render gallery
