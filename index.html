@@ -113,5 +113,75 @@
     </footer>
 
     <script src="assets/js/main.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script type="module">
+      import { fetchGallery, fetchPolls, vote } from './assets/js/supabase.js';
+      async function trySupabase() {
+        try {
+          const res = await fetch('supabase/supabaseConfig.json', { cache: 'no-store' });
+          if (!res.ok) return; // no config, use localStorage
+          const gallery = await fetchGallery();
+          const polls = await fetchPolls();
+          // Render gallery
+          const grid = document.getElementById('galleryGrid');
+          if (grid) {
+            grid.innerHTML = '';
+            gallery.forEach((it) => {
+              const wrapper = document.createElement('div');
+              wrapper.className = 'gallery-item';
+              const isVideo = it.type === 'video';
+              if (isVideo) {
+                const ev = document.createElement('iframe');
+                ev.src = it.storage_url;
+                ev.setAttribute('frameborder', '0');
+                ev.allowFullscreen = true;
+                wrapper.appendChild(ev);
+              } else {
+                const img = document.createElement('img');
+                img.src = it.storage_url;
+                img.alt = it.alt || 'Gallery item';
+                wrapper.appendChild(img);
+              }
+              grid.appendChild(wrapper);
+            });
+          }
+
+          // Render polls
+          const list = document.getElementById('pollsList');
+          if (list) {
+            list.innerHTML = '';
+            polls.forEach((p) => {
+              const card = document.createElement('div');
+              card.className = 'poll-card';
+              const title = document.createElement('h3');
+              title.textContent = p.question;
+              const optionsWrap = document.createElement('div');
+              optionsWrap.className = 'poll-options';
+              const totalVotes = p.options.reduce((s, o) => s + (o.votes || 0), 0) || 0;
+              p.options.forEach((o) => {
+                const btn = document.createElement('button');
+                const percent = totalVotes ? Math.round((o.votes || 0) * 100 / totalVotes) : 0;
+                btn.innerHTML = `${o.text} — ${percent}% (${o.votes || 0})`;
+                btn.addEventListener('click', async () => {
+                  try { await vote(p.id, o.id); location.reload(); } catch (e) { alert('Already voted or error'); }
+                });
+                optionsWrap.appendChild(btn);
+              });
+              const bar = document.createElement('div');
+              bar.className = 'poll-progress';
+              const fill = document.createElement('span');
+              const topPercent = totalVotes ? Math.max(...p.options.map(o => Math.round((o.votes || 0) * 100 / totalVotes))) : 0;
+              fill.style.width = `${topPercent}%`;
+              bar.appendChild(fill);
+              card.appendChild(title);
+              card.appendChild(optionsWrap);
+              card.appendChild(bar);
+              list.appendChild(card);
+            });
+          }
+        } catch {}
+      }
+      trySupabase();
+    </script>
   </body>
 </html> 
