@@ -345,7 +345,7 @@
         const using = await withSupabase(async (sb) => {
           if (!gSrc.value) return false;
           const { error } = await sb.from('gallery_items').insert({ type: gType.value, storage_url: gSrc.value, alt: gAlt.value || null });
-          if (error) { alert('Supabase error adding gallery item'); return true; }
+          if (error) { alert('Supabase error adding gallery item: ' + (error.message || 'unknown')); return true; }
           alert('Added to Supabase gallery.');
           gSrc.value = ''; gAlt.value = '';
           return true;

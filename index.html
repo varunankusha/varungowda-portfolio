@@ -133,15 +133,19 @@
             gallery.forEach((it) => {
               const wrapper = document.createElement('div');
               wrapper.className = 'gallery-item';
-              const isVideo = it.type === 'video';
-              if (isVideo) {
-                const yt = toYouTubeEmbed(it.storage_url);
-                const vi = toVimeoEmbed(it.storage_url);
+              const yt = toYouTubeEmbed(it.storage_url);
+              const vi = toVimeoEmbed(it.storage_url);
+              if (yt || vi) {
                 const el = document.createElement('iframe');
-                el.src = yt || vi || it.storage_url;
+                el.src = yt || vi;
                 el.setAttribute('frameborder', '0');
                 el.allowFullscreen = true;
                 wrapper.appendChild(el);
+              } else if (/\.(mp4|webm|ogg)(\?.*)?$/i.test(it.storage_url)) {
+                const v = document.createElement('video');
+                v.src = it.storage_url;
+                v.controls = true;
+                wrapper.appendChild(v);
               } else {
                 const img = document.createElement('img');
                 img.src = it.storage_url;
