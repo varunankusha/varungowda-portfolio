@@ -81,6 +81,16 @@
           <button class="btn primary" id="pushToSite">Save & Update Site</button>
           <small class="muted">Opens or updates the main page with your changes.</small>
         </div>
+
+        <div class="row" style="margin-top:16px;">
+          <h3>Export / Import</h3>
+          <div class="flex">
+            <button class="btn" id="exportData">Export JSON</button>
+            <label class="btn ghost" for="importFile" style="cursor:pointer;">Import JSON</label>
+            <input id="importFile" type="file" accept="application/json" style="display:none;" />
+          </div>
+          <small class="muted">Use this to transfer your gallery and polls to another device.</small>
+        </div>
       </section>
     </div>
 
@@ -217,6 +227,46 @@
           }
         } catch (e) {
           alert('Could not message the main page. Open index.html and try again.');
+        }
+      });
+
+      // Export / Import
+      const exportBtn = document.getElementById('exportData');
+      const importInput = document.getElementById('importFile');
+
+      exportBtn.addEventListener('click', () => {
+        const blob = new Blob([JSON.stringify({
+          galleryItems: storage.get('galleryItems', []),
+          polls: storage.get('polls', [])
+        }, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'site-data.json';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      });
+
+      importInput.addEventListener('change', async () => {
+        const file = importInput.files && importInput.files[0];
+        if (!file) return;
+        try {
+          const text = await file.text();
+          const data = JSON.parse(text);
+          if (data.galleryItems) storage.set('galleryItems', data.galleryItems);
+          if (data.polls) storage.set('polls', data.polls);
+          loadLists();
+          if (window.opener) {
+            window.opener.postMessage({ type: 'updateGallery', payload: storage.get('galleryItems', []) }, '*');
+            window.opener.postMessage({ type: 'updatePolls', payload: storage.get('polls', []) }, '*');
+          }
+          alert('Imported data. Reload homepage to see updates.');
+        } catch (e) {
+          alert('Failed to import JSON');
+        } finally {
+          importInput.value = '';
         }
       });
     </script>
