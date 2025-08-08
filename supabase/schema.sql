@@ -39,13 +39,14 @@ create table if not exists public.poll_options (
   votes_count int not null default 0
 );
 
+-- Anonymous votes: one per voter_hash per poll
 create table if not exists public.poll_votes (
   id bigserial primary key,
   poll_id uuid not null references public.polls(id) on delete cascade,
   option_id uuid not null references public.poll_options(id) on delete cascade,
-  user_id uuid not null,
+  voter_hash text not null,
   created_at timestamptz not null default now(),
-  unique (poll_id, user_id)
+  unique (poll_id, voter_hash)
 );
 
 alter table public.polls enable row level security;
@@ -64,30 +65,30 @@ create policy if not exists polls_write on public.polls
 create policy if not exists poll_options_write on public.poll_options
   for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
 
--- Votes are inserted via RPC. Prevent direct writes (optional: allow insert by authenticated only)
-create policy if not exists poll_votes_read on public.poll_votes for select using (auth.role() = 'authenticated');
-create policy if not exists poll_votes_insert on public.poll_votes for insert with check (auth.role() = 'authenticated');
+-- Votes: allow anonymous inserts via RPC (and optional direct insert)
+create policy if not exists poll_votes_read on public.poll_votes for select using (true);
+create policy if not exists poll_votes_insert on public.poll_votes for insert with check (true);
 
--- Voting function: one vote per authenticated user per poll
-create or replace function public.vote(p_poll_id uuid, p_option_id uuid)
+-- Voting function: one anonymous vote per poll per voter_hash
+create or replace function public.vote_anon(p_poll_id uuid, p_option_id uuid, p_voter_hash text)
 returns void
 language plpgsql
 security definer
 set search_path = public
 as $$
 begin
-  -- Insert vote; unique constraint enforces one vote per poll per user
-  insert into public.poll_votes (poll_id, option_id, user_id)
-  values (p_poll_id, p_option_id, auth.uid());
+  -- Insert vote; unique constraint enforces one vote per poll per voter_hash
+  insert into public.poll_votes (poll_id, option_id, voter_hash)
+  values (p_poll_id, p_option_id, p_voter_hash);
 
   -- Increment count
   update public.poll_options
     set votes_count = votes_count + 1
   where id = p_option_id;
 exception when unique_violation then
-  -- Ignore if user already voted
+  -- Ignore if already voted
   null;
 end;
 $$;
 
-grant execute on function public.vote(uuid, uuid) to anon, authenticated; 
+grant execute on function public.vote_anon(uuid, uuid, text) to anon, authenticated; 
