@@ -165,30 +165,54 @@
         
         const totalVotes = poll.options.reduce((s, o) => s + (o.votes || 0), 0) || 0;
         
-        poll.options.forEach((option, index) => {
-          const btn = document.createElement('button');
-          const percent = totalVotes ? Math.round((option.votes || 0) * 100 / totalVotes) : 0;
-          btn.innerHTML = `${option.text} — ${percent}% (${option.votes || 0})`;
+                 poll.options.forEach((option, index) => {
+           const btn = document.createElement('button');
+           const percent = totalVotes ? Math.round((option.votes || 0) * 100 / totalVotes) : 0;
+           btn.innerHTML = `${option.text} — ${percent}% (${option.votes || 0})`;
+           
+           // Check if user has already voted on this poll
+           if (!window.USE_SUPABASE) {
+             const votedPolls = JSON.parse(localStorage.getItem('votedPolls') || '{}');
+             const pollKey = poll.question;
+             if (votedPolls[pollKey]) {
+               btn.disabled = true;
+               btn.style.opacity = '0.6';
+               btn.style.cursor = 'not-allowed';
+             }
+           }
           
-          btn.addEventListener('click', async () => {
-            if (window.USE_SUPABASE && poll.id && option.id) {
-              try { 
-                await vote(poll.id, option.id); 
-                location.reload(); 
-              } catch (e) { 
-                alert('Already voted or error'); 
-              }
-            } else {
-              // Handle localStorage voting
-              const polls = JSON.parse(localStorage.getItem('polls') || '[]');
-              const pollIndex = polls.findIndex(p => p.question === poll.question);
-              if (pollIndex !== -1) {
-                polls[pollIndex].options[index].votes = (polls[pollIndex].options[index].votes || 0) + 1;
-                localStorage.setItem('polls', JSON.stringify(polls));
-                location.reload();
-              }
-            }
-          });
+                     btn.addEventListener('click', async () => {
+             if (window.USE_SUPABASE && poll.id && option.id) {
+               try { 
+                 await vote(poll.id, option.id); 
+                 location.reload(); 
+               } catch (e) { 
+                 alert('Already voted or error'); 
+               }
+             } else {
+               // Handle localStorage voting with one vote per device
+               const votedPolls = JSON.parse(localStorage.getItem('votedPolls') || '{}');
+               const pollKey = poll.question; // Use question as unique key
+               
+               if (votedPolls[pollKey]) {
+                 alert('You have already voted on this poll!');
+                 return;
+               }
+               
+               const polls = JSON.parse(localStorage.getItem('polls') || '[]');
+               const pollIndex = polls.findIndex(p => p.question === poll.question);
+               if (pollIndex !== -1) {
+                 polls[pollIndex].options[index].votes = (polls[pollIndex].options[index].votes || 0) + 1;
+                 localStorage.setItem('polls', JSON.stringify(polls));
+                 
+                 // Mark this poll as voted
+                 votedPolls[pollKey] = true;
+                 localStorage.setItem('votedPolls', JSON.stringify(votedPolls));
+                 
+                 location.reload();
+               }
+             }
+           });
           
           optionsWrap.appendChild(btn);
         });

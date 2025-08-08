@@ -33,9 +33,10 @@
     
     <div class="debug-section">
         <h2>Actions</h2>
-        <button onclick="clearAll()">Clear All localStorage</button>
-        <button onclick="addTestData()">Add Test Data</button>
-        <button onclick="refresh()">Refresh</button>
+                 <button onclick="clearAll()">Clear All localStorage</button>
+         <button onclick="resetVotes()">Reset All Votes</button>
+         <button onclick="addTestData()">Add Test Data</button>
+         <button onclick="refresh()">Refresh</button>
     </div>
 
     <script>
@@ -45,12 +46,15 @@
             const galleryItems = localStorage.getItem('galleryItems');
             const polls = localStorage.getItem('polls');
             
-            rawData.innerHTML = `
-                <h3>galleryItems:</h3>
-                <pre>${galleryItems || 'null'}</pre>
-                <h3>polls:</h3>
-                <pre>${polls || 'null'}</pre>
-            `;
+                         const votedPolls = localStorage.getItem('votedPolls');
+             rawData.innerHTML = `
+                 <h3>galleryItems:</h3>
+                 <pre>${galleryItems || 'null'}</pre>
+                 <h3>polls:</h3>
+                 <pre>${polls || 'null'}</pre>
+                 <h3>votedPolls:</h3>
+                 <pre>${votedPolls || 'null'}</pre>
+             `;
             
             // Render gallery items
             const galleryDebug = document.getElementById('galleryDebug');
@@ -87,39 +91,61 @@
                 if (pollsData.length === 0) {
                     pollsDebug.innerHTML = '<p>No polls found</p>';
                 } else {
-                    pollsData.forEach((poll, index) => {
-                        const div = document.createElement('div');
-                        div.className = 'poll-card';
-                        div.innerHTML = `
-                            <h3>Poll ${index + 1}: ${poll.question}</h3>
-                            <div class="poll-options">
-                                ${poll.options.map((option, optIndex) => 
-                                    `<button onclick="vote(${index}, ${optIndex})">${option.text} (${option.votes || 0} votes)</button>`
-                                ).join('')}
-                            </div>
-                        `;
-                        pollsDebug.appendChild(div);
-                    });
+                                         const votedPolls = JSON.parse(localStorage.getItem('votedPolls') || '{}');
+                     pollsData.forEach((poll, index) => {
+                         const div = document.createElement('div');
+                         div.className = 'poll-card';
+                         const hasVoted = votedPolls[poll.question];
+                         div.innerHTML = `
+                             <h3>Poll ${index + 1}: ${poll.question} ${hasVoted ? '<span style="color: red;">(VOTED)</span>' : ''}</h3>
+                             <div class="poll-options">
+                                 ${poll.options.map((option, optIndex) => 
+                                     `<button onclick="vote(${index}, ${optIndex})" ${hasVoted ? 'disabled style="opacity: 0.6;"' : ''}>${option.text} (${option.votes || 0} votes)</button>`
+                                 ).join('')}
+                             </div>
+                         `;
+                         pollsDebug.appendChild(div);
+                     });
                 }
             } catch (error) {
                 pollsDebug.innerHTML = `<p>Error parsing polls: ${error.message}</p>`;
             }
         }
         
-        function vote(pollIndex, optionIndex) {
-            const polls = JSON.parse(localStorage.getItem('polls') || '[]');
-            if (polls[pollIndex] && polls[pollIndex].options[optionIndex]) {
-                polls[pollIndex].options[optionIndex].votes = (polls[pollIndex].options[optionIndex].votes || 0) + 1;
-                localStorage.setItem('polls', JSON.stringify(polls));
-                refresh();
-            }
-        }
+                 function vote(pollIndex, optionIndex) {
+             const polls = JSON.parse(localStorage.getItem('polls') || '[]');
+             const votedPolls = JSON.parse(localStorage.getItem('votedPolls') || '{}');
+             
+             if (polls[pollIndex] && polls[pollIndex].options[optionIndex]) {
+                 const pollKey = polls[pollIndex].question;
+                 
+                 if (votedPolls[pollKey]) {
+                     alert('You have already voted on this poll!');
+                     return;
+                 }
+                 
+                 polls[pollIndex].options[optionIndex].votes = (polls[pollIndex].options[optionIndex].votes || 0) + 1;
+                 localStorage.setItem('polls', JSON.stringify(polls));
+                 
+                 // Mark as voted
+                 votedPolls[pollKey] = true;
+                 localStorage.setItem('votedPolls', JSON.stringify(votedPolls));
+                 
+                 refresh();
+             }
+         }
         
-        function clearAll() {
-            localStorage.removeItem('galleryItems');
-            localStorage.removeItem('polls');
-            refresh();
-        }
+                 function clearAll() {
+             localStorage.removeItem('galleryItems');
+             localStorage.removeItem('polls');
+             localStorage.removeItem('votedPolls');
+             refresh();
+         }
+         
+         function resetVotes() {
+             localStorage.removeItem('votedPolls');
+             refresh();
+         }
         
         function addTestData() {
             // Add test gallery item
