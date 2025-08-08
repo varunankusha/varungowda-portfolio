@@ -69,6 +69,11 @@ function toVimeoEmbed(url) {
   return null;
 }
 
+function isEmbeddableVideo(url) {
+  const isMedia = /\.(mp4|webm|ogg)(\?.*)?$/i.test(url);
+  return Boolean(toYouTubeEmbed(url) || toVimeoEmbed(url) || isMedia);
+}
+
 function createEmbeddedVideoElement(src) {
   const yt = toYouTubeEmbed(src);
   if (yt) {
@@ -115,7 +120,8 @@ function renderGallery() {
   items.forEach((it) => {
     const wrapper = document.createElement('div');
     wrapper.className = 'gallery-item';
-    if (it.type === 'video') {
+    const shouldEmbed = it.type === 'video' || isEmbeddableVideo(it.src || '');
+    if (shouldEmbed) {
       const embed = createEmbeddedVideoElement(it.src);
       wrapper.appendChild(embed);
     } else {
@@ -128,13 +134,30 @@ function renderGallery() {
   });
 }
 
+// Poll helpers: one-vote-per-browser per poll
+function computePollKey(poll) {
+  const base = `${poll.question}::${(poll.options || []).map(o => o.text).join('|')}`;
+  let hash = 0;
+  for (let i = 0; i < base.length; i++) {
+    const chr = base.charCodeAt(i);
+    hash = ((hash << 5) - hash) + chr;
+    hash |= 0;
+  }
+  return String(hash);
+}
+
 // Render Polls
 function renderPolls() {
   const list = document.getElementById('pollsList');
   if (!list) return;
   const polls = storage.get('polls', []);
+  const votedMap = storage.get('pollVotes', {});
   list.innerHTML = '';
+
   polls.forEach((poll, pollIndex) => {
+    const pollKey = computePollKey(poll);
+    const userChoice = votedMap[pollKey];
+
     const card = document.createElement('div');
     card.className = 'poll-card';
 
@@ -151,10 +174,18 @@ function renderPolls() {
       const btn = document.createElement('button');
       const percent = totalVotes ? Math.round((opt.votes || 0) * 100 / totalVotes) : 0;
       btn.innerHTML = `${opt.text} — ${percent}% (${opt.votes || 0})`;
+      if (typeof userChoice === 'number') {
+        btn.disabled = true;
+        if (userChoice === optIndex) btn.style.opacity = '1'; else btn.style.opacity = '0.7';
+      }
       btn.addEventListener('click', () => {
-        const updated = storage.get('polls', []);
-        updated[pollIndex].options[optIndex].votes = (updated[pollIndex].options[optIndex].votes || 0) + 1;
-        storage.set('polls', updated);
+        const currentVotes = storage.get('pollVotes', {});
+        if (typeof currentVotes[pollKey] === 'number') return; // already voted
+        const updatedPolls = storage.get('polls', []);
+        updatedPolls[pollIndex].options[optIndex].votes = (updatedPolls[pollIndex].options[optIndex].votes || 0) + 1;
+        storage.set('polls', updatedPolls);
+        currentVotes[pollKey] = optIndex;
+        storage.set('pollVotes', currentVotes);
         renderPolls();
       });
       optionsWrap.appendChild(btn);
