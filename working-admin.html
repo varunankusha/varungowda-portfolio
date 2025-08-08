@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Working Admin</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            background: #f5f5f5;
+        }
+        .container { 
+            max-width: 800px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 20px; 
+            border-radius: 10px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .status { 
+            padding: 15px; 
+            margin: 15px 0; 
+            border-radius: 5px; 
+            font-weight: bold;
+        }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        
+        .section { 
+            margin: 20px 0; 
+            padding: 20px; 
+            border: 1px solid #ddd; 
+            border-radius: 5px; 
+        }
+        
+        .form-group { 
+            margin: 15px 0; 
+        }
+        
+        label { 
+            display: block; 
+            margin-bottom: 5px; 
+            font-weight: bold; 
+        }
+        
+        input, select, textarea { 
+            width: 100%; 
+            padding: 10px; 
+            border: 1px solid #ddd; 
+            border-radius: 4px; 
+            font-size: 16px; 
+            box-sizing: border-box;
+        }
+        
+        button { 
+            background: #007bff; 
+            color: white; 
+            padding: 12px 24px; 
+            border: none; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            font-size: 16px; 
+            margin: 5px;
+        }
+        
+        button:hover { 
+            background: #0056b3; 
+        }
+        
+        button.secondary { 
+            background: #6c757d; 
+        }
+        
+        button.secondary:hover { 
+            background: #545b62; 
+        }
+        
+        .item { 
+            background: #f8f9fa; 
+            border: 1px solid #dee2e6; 
+            border-radius: 4px; 
+            padding: 15px; 
+            margin: 10px 0; 
+        }
+        
+        .item strong { 
+            color: #495057; 
+        }
+        
+        .item small { 
+            color: #6c757d; 
+            display: block; 
+            margin-top: 5px; 
+        }
+        
+        .delete-btn { 
+            background: #dc3545; 
+            padding: 5px 10px; 
+            font-size: 12px; 
+        }
+        
+        .delete-btn:hover { 
+            background: #c82333; 
+        }
+        
+        .password-section {
+            text-align: center;
+            margin: 50px 0;
+        }
+        
+        .content-section {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Working Admin Panel</h1>
+        
+        <div id="status" class="status info">Enter password to unlock admin panel</div>
+        
+        <!-- Password Section -->
+        <div id="passwordSection" class="password-section">
+            <h2>Admin Access</h2>
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" placeholder="Enter password">
+            </div>
+            <button onclick="checkPassword()">Unlock Admin</button>
+        </div>
+        
+        <!-- Content Section -->
+        <div id="contentSection" class="content-section">
+            <!-- Gallery Section -->
+            <div class="section">
+                <h2>📷 Gallery Management</h2>
+                <div class="form-group">
+                    <label for="galleryType">Type:</label>
+                    <select id="galleryType">
+                        <option value="image">Image</option>
+                        <option value="video">Video</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="galleryUrl">URL:</label>
+                    <input type="text" id="galleryUrl" placeholder="https://example.com/image.jpg">
+                </div>
+                <div class="form-group">
+                    <label for="galleryAlt">Description:</label>
+                    <input type="text" id="galleryAlt" placeholder="Optional description">
+                </div>
+                <button onclick="addGalleryItem()">Add to Gallery</button>
+                <button class="secondary" onclick="clearGallery()">Clear All Gallery Items</button>
+                
+                <h3>Current Gallery Items:</h3>
+                <div id="galleryList"></div>
+            </div>
+            
+            <!-- Polls Section -->
+            <div class="section">
+                <h2>📊 Poll Management</h2>
+                <div class="form-group">
+                    <label for="pollQuestion">Question:</label>
+                    <input type="text" id="pollQuestion" placeholder="What's your favorite color?">
+                </div>
+                <div class="form-group">
+                    <label for="pollOptions">Options (comma separated):</label>
+                    <input type="text" id="pollOptions" placeholder="Red, Blue, Green, Yellow">
+                </div>
+                <button onclick="addPoll()">Create Poll</button>
+                <button class="secondary" onclick="clearPolls()">Clear All Polls</button>
+                
+                <h3>Current Polls:</h3>
+                <div id="pollsList"></div>
+            </div>
+            
+            <!-- Actions Section -->
+            <div class="section">
+                <h2>🔄 Actions</h2>
+                <button onclick="saveAndView()">Save & View Main Site</button>
+                <button class="secondary" onclick="exportData()">Export Data</button>
+                <button class="secondary" onclick="importData()">Import Data</button>
+                <input type="file" id="importFile" accept=".json" style="display: none;">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const PASSWORD = 'neelamma';
+        
+        function updateStatus(message, type = 'info') {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+        }
+        
+        function checkPassword() {
+            const password = document.getElementById('password').value;
+            if (password === PASSWORD) {
+                document.getElementById('passwordSection').style.display = 'none';
+                document.getElementById('contentSection').style.display = 'block';
+                updateStatus('Admin panel unlocked! You can now add content.', 'success');
+                loadAllData();
+            } else {
+                updateStatus('Incorrect password. Try again.', 'error');
+                document.getElementById('password').value = '';
+            }
+        }
+        
+        function addGalleryItem() {
+            const type = document.getElementById('galleryType').value;
+            const url = document.getElementById('galleryUrl').value.trim();
+            const alt = document.getElementById('galleryAlt').value.trim();
+            
+            if (!url) {
+                updateStatus('Please enter a URL for the gallery item.', 'error');
+                return;
+            }
+            
+            try {
+                const items = JSON.parse(localStorage.getItem('galleryItems') || '[]');
+                items.push({ type, src: url, alt });
+                localStorage.setItem('galleryItems', JSON.stringify(items));
+                
+                document.getElementById('galleryUrl').value = '';
+                document.getElementById('galleryAlt').value = '';
+                
+                updateStatus(`Added ${type} to gallery successfully!`, 'success');
+                loadGalleryList();
+            } catch (error) {
+                updateStatus('Error adding gallery item: ' + error.message, 'error');
+            }
+        }
+        
+        function addPoll() {
+            const question = document.getElementById('pollQuestion').value.trim();
+            const optionsText = document.getElementById('pollOptions').value.trim();
+            
+            if (!question || !optionsText) {
+                updateStatus('Please enter both question and options.', 'error');
+                return;
+            }
+            
+            const options = optionsText.split(',').map(s => s.trim()).filter(Boolean);
+            if (options.length < 2) {
+                updateStatus('Please enter at least 2 options.', 'error');
+                return;
+            }
+            
+            try {
+                const polls = JSON.parse(localStorage.getItem('polls') || '[]');
+                const pollOptions = options.map(text => ({ text, votes: 0 }));
+                polls.push({ question, options: pollOptions });
+                localStorage.setItem('polls', JSON.stringify(polls));
+                
+                document.getElementById('pollQuestion').value = '';
+                document.getElementById('pollOptions').value = '';
+                
+                updateStatus('Poll created successfully!', 'success');
+                loadPollsList();
+            } catch (error) {
+                updateStatus('Error creating poll: ' + error.message, 'error');
+            }
+        }
+        
+        function loadGalleryList() {
+            const items = JSON.parse(localStorage.getItem('galleryItems') || '[]');
+            const listEl = document.getElementById('galleryList');
+            
+            if (items.length === 0) {
+                listEl.innerHTML = '<p style="color: #6c757d;">No gallery items yet.</p>';
+                return;
+            }
+            
+            listEl.innerHTML = items.map((item, index) => `
+                <div class="item">
+                    <strong>${item.type.toUpperCase()}</strong> - ${item.src}
+                    ${item.alt ? `<small>Description: ${item.alt}</small>` : ''}
+                    <button class="delete-btn" onclick="deleteGalleryItem(${index})">Delete</button>
+                </div>
+            `).join('');
+        }
+        
+        function loadPollsList() {
+            const polls = JSON.parse(localStorage.getItem('polls') || '[]');
+            const listEl = document.getElementById('pollsList');
+            
+            if (polls.length === 0) {
+                listEl.innerHTML = '<p style="color: #6c757d;">No polls yet.</p>';
+                return;
+            }
+            
+            listEl.innerHTML = polls.map((poll, index) => `
+                <div class="item">
+                    <strong>${poll.question}</strong>
+                    <small>Options: ${poll.options.map(o => o.text).join(', ')}</small>
+                    <button class="delete-btn" onclick="deletePoll(${index})">Delete</button>
+                </div>
+            `).join('');
+        }
+        
+        function deleteGalleryItem(index) {
+            if (confirm('Are you sure you want to delete this gallery item?')) {
+                const items = JSON.parse(localStorage.getItem('galleryItems') || '[]');
+                items.splice(index, 1);
+                localStorage.setItem('galleryItems', JSON.stringify(items));
+                loadGalleryList();
+                updateStatus('Gallery item deleted.', 'success');
+            }
+        }
+        
+        function deletePoll(index) {
+            if (confirm('Are you sure you want to delete this poll?')) {
+                const polls = JSON.parse(localStorage.getItem('polls') || '[]');
+                polls.splice(index, 1);
+                localStorage.setItem('polls', JSON.stringify(polls));
+                loadPollsList();
+                updateStatus('Poll deleted.', 'success');
+            }
+        }
+        
+        function clearGallery() {
+            if (confirm('Are you sure you want to clear all gallery items?')) {
+                localStorage.removeItem('galleryItems');
+                loadGalleryList();
+                updateStatus('All gallery items cleared.', 'success');
+            }
+        }
+        
+        function clearPolls() {
+            if (confirm('Are you sure you want to clear all polls?')) {
+                localStorage.removeItem('polls');
+                loadPollsList();
+                updateStatus('All polls cleared.', 'success');
+            }
+        }
+        
+        function loadAllData() {
+            loadGalleryList();
+            loadPollsList();
+        }
+        
+        function saveAndView() {
+            try {
+                if (window.opener) {
+                    const gallery = JSON.parse(localStorage.getItem('galleryItems') || '[]');
+                    const polls = JSON.parse(localStorage.getItem('polls') || '[]');
+                    window.opener.postMessage({ type: 'updateGallery', payload: gallery }, '*');
+                    window.opener.postMessage({ type: 'updatePolls', payload: polls }, '*');
+                    updateStatus('Data sent to main page. Switch to it to see changes.', 'success');
+                } else {
+                    window.open('index.html', '_blank');
+                    updateStatus('Opened main page. Your data is saved.', 'success');
+                }
+            } catch (error) {
+                updateStatus('Error updating main page: ' + error.message, 'error');
+            }
+        }
+        
+        function exportData() {
+            try {
+                const data = {
+                    galleryItems: JSON.parse(localStorage.getItem('galleryItems') || '[]'),
+                    polls: JSON.parse(localStorage.getItem('polls') || '[]')
+                };
+                
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'website-data.json';
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(url);
+                
+                updateStatus('Data exported successfully!', 'success');
+            } catch (error) {
+                updateStatus('Error exporting data: ' + error.message, 'error');
+            }
+        }
+        
+        function importData() {
+            document.getElementById('importFile').click();
+        }
+        
+        document.getElementById('importFile').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (data.galleryItems) {
+                        localStorage.setItem('galleryItems', JSON.stringify(data.galleryItems));
+                    }
+                    if (data.polls) {
+                        localStorage.setItem('polls', JSON.stringify(data.polls));
+                    }
+                    loadAllData();
+                    updateStatus('Data imported successfully!', 'success');
+                } catch (error) {
+                    updateStatus('Error importing data: ' + error.message, 'error');
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        });
+        
+        // Enter key support for password
+        document.getElementById('password').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                checkPassword();
+            }
+        });
+        
+        // Initialize
+        updateStatus('Ready to use. Enter password to unlock.', 'info');
+    </script>
+</body>
+</html>

@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Supabase Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        button { padding: 10px 20px; margin: 5px; }
+        input { padding: 8px; margin: 5px; width: 300px; }
+    </style>
+</head>
+<body>
+    <h1>Supabase Connection Test</h1>
+    
+    <div id="status" class="status info">Testing connection...</div>
+    
+    <h2>Test Gallery Item</h2>
+    <input type="text" id="testUrl" placeholder="Enter image URL (e.g., https://picsum.photos/400/300)" value="https://picsum.photos/400/300">
+    <button onclick="testAddGallery()">Test Add Gallery Item</button>
+    
+    <h2>Test Poll</h2>
+    <input type="text" id="testQuestion" placeholder="Question" value="Test question?">
+    <input type="text" id="testOptions" placeholder="Options (comma separated)" value="Option 1, Option 2, Option 3">
+    <button onclick="testAddPoll()">Test Add Poll</button>
+    
+    <h2>Test Fetch</h2>
+    <button onclick="testFetchGallery()">Test Fetch Gallery</button>
+    <button onclick="testFetchPolls()">Test Fetch Polls</button>
+    
+    <div id="results"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        let supabaseClient = null;
+        
+        async function initSupabase() {
+            try {
+                const res = await fetch('supabase/supabaseConfig.json', { cache: 'no-store' });
+                if (!res.ok) {
+                    throw new Error('No Supabase config found');
+                }
+                const cfg = await res.json();
+                const { createClient } = window.supabase;
+                supabaseClient = createClient(cfg.url, cfg.anonKey);
+                return true;
+            } catch (error) {
+                console.error('Supabase init error:', error);
+                return false;
+            }
+        }
+        
+        async function updateStatus(message, type = 'info') {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+        }
+        
+        async function testAddGallery() {
+            const url = document.getElementById('testUrl').value;
+            if (!url) {
+                updateStatus('Please enter a URL', 'error');
+                return;
+            }
+            
+            if (!supabaseClient) {
+                updateStatus('Supabase not initialized', 'error');
+                return;
+            }
+            
+            try {
+                updateStatus('Adding gallery item...', 'info');
+                const { data, error } = await supabaseClient.from('gallery_items').insert({
+                    type: 'image',
+                    storage_url: url,
+                    alt: 'Test image'
+                }).select('*').single();
+                
+                if (error) {
+                    updateStatus('Error adding gallery item: ' + error.message, 'error');
+                    console.error('Gallery error:', error);
+                } else {
+                    updateStatus('Successfully added gallery item!', 'success');
+                    console.log('Gallery item added:', data);
+                }
+            } catch (err) {
+                updateStatus('Unexpected error: ' + err.message, 'error');
+                console.error('Unexpected error:', err);
+            }
+        }
+        
+        async function testAddPoll() {
+            const question = document.getElementById('testQuestion').value;
+            const options = document.getElementById('testOptions').value;
+            
+            if (!question || !options) {
+                updateStatus('Please enter question and options', 'error');
+                return;
+            }
+            
+            if (!supabaseClient) {
+                updateStatus('Supabase not initialized', 'error');
+                return;
+            }
+            
+            try {
+                updateStatus('Creating poll...', 'info');
+                
+                // Create poll
+                const { data: poll, error: e1 } = await supabaseClient.from('polls').insert({
+                    question: question
+                }).select('*').single();
+                
+                if (e1) {
+                    updateStatus('Error creating poll: ' + e1.message, 'error');
+                    console.error('Poll creation error:', e1);
+                    return;
+                }
+                
+                // Create options
+                const opts = options.split(',').map(s => s.trim()).filter(Boolean);
+                const rows = opts.map(text => ({ poll_id: poll.id, text }));
+                const { error: e2 } = await supabaseClient.from('poll_options').insert(rows);
+                
+                if (e2) {
+                    updateStatus('Error adding poll options: ' + e2.message, 'error');
+                    console.error('Options creation error:', e2);
+                    return;
+                }
+                
+                updateStatus('Successfully created poll!', 'success');
+                console.log('Poll created:', poll);
+            } catch (err) {
+                updateStatus('Unexpected error: ' + err.message, 'error');
+                console.error('Unexpected error:', err);
+            }
+        }
+        
+        async function testFetchGallery() {
+            if (!supabaseClient) {
+                updateStatus('Supabase not initialized', 'error');
+                return;
+            }
+            
+            try {
+                updateStatus('Fetching gallery...', 'info');
+                const { data, error } = await supabaseClient.from('gallery_items').select('*').order('created_at', { ascending: false });
+                
+                if (error) {
+                    updateStatus('Error fetching gallery: ' + error.message, 'error');
+                    console.error('Gallery fetch error:', error);
+                } else {
+                    updateStatus(`Successfully fetched ${data.length} gallery items`, 'success');
+                    console.log('Gallery items:', data);
+                    document.getElementById('results').innerHTML = '<h3>Gallery Items:</h3><pre>' + JSON.stringify(data, null, 2) + '</pre>';
+                }
+            } catch (err) {
+                updateStatus('Unexpected error: ' + err.message, 'error');
+                console.error('Unexpected error:', err);
+            }
+        }
+        
+        async function testFetchPolls() {
+            if (!supabaseClient) {
+                updateStatus('Supabase not initialized', 'error');
+                return;
+            }
+            
+            try {
+                updateStatus('Fetching polls...', 'info');
+                const { data: polls, error: e1 } = await supabaseClient.from('polls').select('*').order('created_at', { ascending: false });
+                
+                if (e1) {
+                    updateStatus('Error fetching polls: ' + e1.message, 'error');
+                    console.error('Polls fetch error:', e1);
+                    return;
+                }
+                
+                const ids = polls.map(p => p.id);
+                const { data: options, error: e2 } = await supabaseClient.from('poll_options').select('*').in('poll_id', ids);
+                
+                if (e2) {
+                    updateStatus('Error fetching poll options: ' + e2.message, 'error');
+                    console.error('Options fetch error:', e2);
+                    return;
+                }
+                
+                const byPoll = options.reduce((m, o) => { (m[o.poll_id] ||= []).push(o); return m; }, {});
+                const result = polls.map(p => ({ ...p, options: byPoll[p.id] || [] }));
+                
+                updateStatus(`Successfully fetched ${polls.length} polls`, 'success');
+                console.log('Polls:', result);
+                document.getElementById('results').innerHTML = '<h3>Polls:</h3><pre>' + JSON.stringify(result, null, 2) + '</pre>';
+            } catch (err) {
+                updateStatus('Unexpected error: ' + err.message, 'error');
+                console.error('Unexpected error:', err);
+            }
+        }
+        
+        // Initialize on page load
+        window.addEventListener('load', async () => {
+            const success = await initSupabase();
+            if (success) {
+                updateStatus('Supabase initialized successfully', 'success');
+            } else {
+                updateStatus('Failed to initialize Supabase', 'error');
+            }
+        });
+    </script>
+</body>
+</html>

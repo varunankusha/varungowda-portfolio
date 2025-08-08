@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Debug Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        button { padding: 10px 20px; margin: 5px; }
+        input { padding: 8px; margin: 5px; width: 300px; }
+    </style>
+</head>
+<body>
+    <h1>Debug Test</h1>
+    
+    <div id="status" class="status success">Testing...</div>
+    
+    <h2>Test localStorage</h2>
+    <button onclick="testLocalStorage()">Test localStorage</button>
+    <button onclick="clearLocalStorage()">Clear localStorage</button>
+    
+    <h2>Test Gallery</h2>
+    <input type="text" id="testUrl" placeholder="Enter image URL" value="https://picsum.photos/400/300">
+    <button onclick="addTestImage()">Add Test Image</button>
+    
+    <h2>Test Poll</h2>
+    <input type="text" id="testQuestion" placeholder="Question" value="Test question?">
+    <input type="text" id="testOptions" placeholder="Options" value="Yes,No">
+    <button onclick="addTestPoll()">Add Test Poll</button>
+    
+    <h2>Current Data</h2>
+    <div id="currentData"></div>
+
+    <script>
+        function updateStatus(message, type = 'success') {
+            document.getElementById('status').textContent = message;
+            document.getElementById('status').className = `status ${type}`;
+        }
+        
+        function showCurrentData() {
+            const gallery = JSON.parse(localStorage.getItem('galleryItems') || '[]');
+            const polls = JSON.parse(localStorage.getItem('polls') || '[]');
+            document.getElementById('currentData').innerHTML = `
+                <h3>Gallery Items: ${gallery.length}</h3>
+                <pre>${JSON.stringify(gallery, null, 2)}</pre>
+                <h3>Polls: ${polls.length}</h3>
+                <pre>${JSON.stringify(polls, null, 2)}</pre>
+            `;
+        }
+        
+        function testLocalStorage() {
+            try {
+                localStorage.setItem('test', 'working');
+                const result = localStorage.getItem('test');
+                if (result === 'working') {
+                    updateStatus('localStorage is working!', 'success');
+                    localStorage.removeItem('test');
+                } else {
+                    updateStatus('localStorage test failed', 'error');
+                }
+            } catch (error) {
+                updateStatus('localStorage error: ' + error.message, 'error');
+            }
+            showCurrentData();
+        }
+        
+        function clearLocalStorage() {
+            try {
+                localStorage.removeItem('galleryItems');
+                localStorage.removeItem('polls');
+                updateStatus('localStorage cleared!', 'success');
+                showCurrentData();
+            } catch (error) {
+                updateStatus('Error clearing localStorage: ' + error.message, 'error');
+            }
+        }
+        
+        function addTestImage() {
+            try {
+                const url = document.getElementById('testUrl').value;
+                if (!url) {
+                    updateStatus('Please enter a URL', 'error');
+                    return;
+                }
+                
+                const items = JSON.parse(localStorage.getItem('galleryItems') || '[]');
+                items.push({ type: 'image', src: url, alt: 'Test image' });
+                localStorage.setItem('galleryItems', JSON.stringify(items));
+                updateStatus('Test image added!', 'success');
+                showCurrentData();
+            } catch (error) {
+                updateStatus('Error adding image: ' + error.message, 'error');
+            }
+        }
+        
+        function addTestPoll() {
+            try {
+                const question = document.getElementById('testQuestion').value;
+                const options = document.getElementById('testOptions').value;
+                
+                if (!question || !options) {
+                    updateStatus('Please enter question and options', 'error');
+                    return;
+                }
+                
+                const polls = JSON.parse(localStorage.getItem('polls') || '[]');
+                const opts = options.split(',').map(s => s.trim()).filter(Boolean).map(t => ({ text: t, votes: 0 }));
+                polls.push({ question: question, options: opts });
+                localStorage.setItem('polls', JSON.stringify(polls));
+                updateStatus('Test poll added!', 'success');
+                showCurrentData();
+            } catch (error) {
+                updateStatus('Error adding poll: ' + error.message, 'error');
+            }
+        }
+        
+        // Show current data on page load
+        window.addEventListener('load', () => {
+            updateStatus('Debug page loaded. Click "Test localStorage" to start.', 'success');
+            showCurrentData();
+        });
+    </script>
+</body>
+</html>
