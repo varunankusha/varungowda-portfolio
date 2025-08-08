@@ -275,18 +275,26 @@
       supaScript.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
       document.body.appendChild(supaScript);
 
+      async function ensureSupabaseLoaded(){
+        if (window.supabase) return true;
+        await new Promise((resolve) => supaScript.addEventListener('load', resolve, { once: true }));
+        return !!window.supabase;
+      }
+
       async function withSupabase(cb){
         try {
           const res = await fetch('supabase/supabaseConfig.json', { cache: 'no-store' });
           if (!res.ok) return null;
           const cfg = await res.json();
+          const ok = await ensureSupabaseLoaded();
+          if (!ok) return null;
           const { createClient } = window.supabase;
           return cb(createClient(cfg.url, cfg.anonKey));
         } catch { return null; }
       }
 
       // If Supabase is present, wire quick actions
-      addGalleryBtn.addEventListener('click', async () => {
+      addGalleryBtn.addEventListener('click', async (e) => {
         const using = await withSupabase(async (sb) => {
           if (!gSrc.value) return false;
           const { error } = await sb.from('gallery_items').insert({ type: gType.value, storage_url: gSrc.value, alt: gAlt.value || null });
@@ -295,11 +303,13 @@
           gSrc.value = ''; gAlt.value = '';
           return true;
         });
-        if (using) return; // handled via Supabase
-        // fallback localStorage handled above
+        if (using) {
+          e.stopImmediatePropagation();
+          e.preventDefault();
+        }
       }, { capture: true });
 
-      addPollBtn.addEventListener('click', async () => {
+      addPollBtn.addEventListener('click', async (e) => {
         const using = await withSupabase(async (sb) => {
           const q = (pQuestion.value||'').trim();
           const opts = (pOptions.value||'').split(',').map(s => s.trim()).filter(Boolean);
@@ -313,8 +323,10 @@
           pQuestion.value = ''; pOptions.value = '';
           return true;
         });
-        if (using) return; // handled via Supabase
-        // fallback localStorage handled above
+        if (using) {
+          e.stopImmediatePropagation();
+          e.preventDefault();
+        }
       }, { capture: true });
 
     </script>
